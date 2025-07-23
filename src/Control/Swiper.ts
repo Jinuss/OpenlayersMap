@@ -40,40 +40,12 @@ class SwipeControl extends Control {
   createDecorations(element: HTMLElement) {
     // 顶部装饰
     const topDecoration = document.createElement("div");
-    topDecoration.style.position = "absolute";
-    topDecoration.style.top = "-48px";
-    topDecoration.style.left = "50%";
-    topDecoration.style.transform = "translateX(-50%)";
-    topDecoration.style.width = "96px";
-    topDecoration.style.height = "96px";
-    topDecoration.style.display = "flex";
-    topDecoration.style.alignItems = "center";
-    topDecoration.style.justifyContent = "center";
-
-    topDecoration.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="48" height="48" style="color: #3b82f6;">
-                        <path d="M12 2L4 7l8 5 8-5-8-5zM4 15l8 5 8-5M4 11l8 5 8-5"></path>
-                    </svg>
-                `;
+    topDecoration.className = "top-decoration";
     element.appendChild(topDecoration);
 
     // 底部装饰
     const bottomDecoration = document.createElement("div");
-    bottomDecoration.style.position = "absolute";
-    bottomDecoration.style.bottom = "-48px";
-    bottomDecoration.style.left = "50%";
-    bottomDecoration.style.transform = "translateX(-50%)";
-    bottomDecoration.style.width = "96px";
-    bottomDecoration.style.height = "96px";
-    bottomDecoration.style.display = "flex";
-    bottomDecoration.style.alignItems = "center";
-    bottomDecoration.style.justifyContent = "center";
-
-    bottomDecoration.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="48" height="48" style="color: #3b82f6;">
-                        <path d="M4 7l8 5 8-5M4 11l8 5 8-5M4 15l8 5 8-5"></path>
-                    </svg>
-                `;
+    bottomDecoration.className = "bottom-decoration";
     element.appendChild(bottomDecoration);
 
     // 中央滑块
@@ -145,10 +117,6 @@ class SwipeControl extends Control {
 
   private handleDragStart(e: DragEvent) {
     e.preventDefault();
-
-    // 添加拖拽样式
-    this.element.style.border = "2px solid #3b82f6";
-    this.element.style.backgroundColor = "rgba(59, 130, 246, 0.2)";
 
     // 设置拖拽状态
     this.dragging = true;

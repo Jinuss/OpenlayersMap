@@ -5,6 +5,7 @@ import View from "ol/View";
 import * as olProj from "ol/proj";
 import OSM from "ol/source/OSM.js";
 import TileLayer from "ol/layer/Tile";
+import SwipeControl from "../../Control/Swiper";
 import {
   ZoomSlider,
   FullScreen,
@@ -14,8 +15,6 @@ import {
 } from "ol/control";
 import {
   KeyboardPan,
-  defaults as interactionDefault,
-  KeyboardZoom,
 } from "ol/interaction";
 import PrintDialog from "ol-ext/control/PrintDialog";
 import { jsPDF } from "jspdf";
@@ -41,8 +40,11 @@ const initMap = () => {
     pixelDelta: 100,
     duration: 200,
   });
+  const amapLayer = AMAP_LAYER();
+  const googleLayer = GOOGLE_LAYER;
+  const vectorLayer = VECTOR_LAYER();
   const map = new Map({
-    layers: [AMAP_LAYER(), GOOGLE_LAYER, VECTOR_LAYER()],
+    layers: [amapLayer, googleLayer, vectorLayer],
     target: "map",
     view: new View({
       center: olProj.fromLonLat(CENTER),
@@ -74,6 +76,8 @@ const initMap = () => {
   map.addControl(new ScaleLine());
 
   map.addControl(new ZoomToExtent({ extent: EXTENT }));
+  const swiperControl = new SwipeControl();
+  map.addControl(swiperControl);
   try {
     emit("setMap", map);
   } catch {}

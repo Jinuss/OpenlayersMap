@@ -20,7 +20,7 @@ export const AMAP_URL =
 
 /**影像图地址 */
 export const GOOGLE_URL =
-  "http://www.google.cn/maps/vt?lyrs=s@189&gl=cn&x={x}&y={y}&z={z}";
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
 export const AMAP_LAYER = (layerName?: string) => {
   return new TileLayer({
@@ -35,7 +35,7 @@ export const AMAP_LAYER = (layerName?: string) => {
 export const GOOGLE_LAYER = new TileLayer({
   source: new XYZ({ url: GOOGLE_URL, crossOrigin: "anonymous" }),
   className: LAYER_NAMES.GOOGLE_LAYER,
-  visible: false,
+  visible: true,
 });
 
 //矢量图层

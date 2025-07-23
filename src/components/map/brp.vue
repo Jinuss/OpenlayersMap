@@ -12,7 +12,10 @@ const coordinate = ref("");
 
 const initEvent = () => {
   const mapInstance = toRaw(map.value);
-  mapInstance.on("pointermove", (evt: { coordinate: Coordinate; }) => {
+  if(Object.keys(mapInstance).length==0){
+      return
+  }
+  mapInstance?.on("pointermove", (evt: { coordinate: Coordinate; }) => {
     var lonLat = transform(evt.coordinate, "EPSG:3857", "EPSG:4326");
     if (lonLat && lonLat.length) {
       var lon = ((((lonLat[0] + 180) % 360) + 360) % 360) - 180;

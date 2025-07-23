@@ -1,0 +1,15 @@
+/* 卷帘控件样式 */
+.swipe-control {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: white;
+  cursor: ew-resize;
+  z-index: 10;
+  transition: all 0.15s;
+}
+
+.swipe-handle-shadow {
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}

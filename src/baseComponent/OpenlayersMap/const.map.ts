@@ -4,7 +4,7 @@ export const EXTENT = [
 ];
 
 /** 缩放 */
-export const ZOOM = { MAX: 22, MIN: 0, INIT: 5 };
+export const ZOOM = { MAX: 18, MIN: 0, INIT: 5 };
 
 // 中心点
 export const CENTER = [114.3005, 30.5928];

@@ -1,12 +1,22 @@
 import { defineStore } from "pinia";
+import { Map } from "ol";
+
+export interface MapState {
+  map: Map | Object | null;
+  mode: string;
+  showGrid: boolean;
+  showWaterMarker: boolean;
+  showSwipe: boolean;
+}
 
 export const useMapStore = defineStore("mapStore", {
-  state: () => {
+  state: (): MapState => {
     return {
       map: {},
       mode: "2D",
       showGrid: false,
       showWaterMarker: false,
+      showSwipe: false,
     };
   },
   actions: {

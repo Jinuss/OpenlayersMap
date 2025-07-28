@@ -1,11 +1,13 @@
 <script setup>
 import gridControl from "./gridControl.vue";
 import waterMarkerControl from "./waterMarkerControl.vue";
+import swipeControl from "./swipeControl.vue";
 </script>
 <template>
   <div class="drag-panel">
     <gridControl />
     <waterMarkerControl />
+    <swipeControl />
   </div>
 </template>
 <style scoped>

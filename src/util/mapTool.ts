@@ -1,6 +1,6 @@
 import * as sphere from "ol/sphere";
 import { Style, Stroke, Icon } from "ol/style";
-import { Geometry, Geometry, Point } from "ol/geom";
+import { Geometry, Point } from "ol/geom";
 import { Coordinate } from "ol/coordinate";
 import { Tile } from "ol";
 import { StyleLike } from "ol/style/Style";
@@ -44,7 +44,7 @@ export const convertToRGBA = (opacity: number, color: string) => {
     rgbaColor = color.replace(/[\d\.]+\)$/g, opacity.toString() + ")");
   } else if (color.includes("rgb")) {
     const rgbValues = color.match(/\d+/g);
-    const [r, g, b] = rgbValues.map(Number);
+    const [r = 255, g = 255, b = 255] = rgbValues?.map(Number) || [];
     rgbaColor = `rgba(${r},${g},${b},${opacity})`;
   } else {
     const tempDiv = document.createElement("div");
@@ -55,7 +55,7 @@ export const convertToRGBA = (opacity: number, color: string) => {
 
     if (computedColor.startsWith("rgb")) {
       const rgbValues = computedColor.match(/\d+/g);
-      const [r, g, b] = rgbValues.map(Number);
+      const [r = 255, g = 255, b = 255] = rgbValues?.map(Number) || [];
       rgbaColor = `rgba(${r},${g},${b},${opacity})`;
     } else {
       throw new Error("Invalid color value");
@@ -344,7 +344,7 @@ function calculateAnglePoint(points) {
 }
 
 //暗色地图底图
-export const tileLoadFunction = (imageTile: Tile, src: string) => {
+export const tileLoadFunction = (imageTile:Tile) => {
   const img = new Image();
   img.setAttribute("crossOrigin", "anonymous");
   img.onload = function () {

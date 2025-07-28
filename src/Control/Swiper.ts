@@ -1,19 +1,23 @@
 import Control from "ol/control/Control";
+import Map from "ol/Map";
 import "./Swiper.css";
+import { EventsKey } from "ol/events";
+import { unByKey } from "ol/Observable";
 
+/**
+ * 地图卷帘控件，支持左右滑动比较不同图层
+ */
 class SwipeControl extends Control {
   private swipePosition: number = 0.5; // 默认位置为50%
   private layers: any[] = [];
   private dragging: boolean = false;
-  constructor(options: { target?: any }) {
-    options = options || {};
+  private map: Map | null = null;
+  private originalExtents: { [layerId: string]: any } = {};
+  private viewChangeListenerKey: null | EventsKey = null;
 
-    const element = document.createElement("div");
-    element.className = "swipe-control";
-    element.style.left = "50%";
-
+  constructor(options: { target?: any } = {}) {
     super({
-      element: element,
+      element: SwipeControl.createControlElement(),
       target: options.target,
     });
 
@@ -21,23 +25,20 @@ class SwipeControl extends Control {
     this.handleDrag = this.handleDrag.bind(this);
     this.handleDragStart = this.handleDragStart.bind(this);
     this.handleDragEnd = this.handleDragEnd.bind(this);
+    this.updateCursor_ = this.updateCursor_.bind(this);
+    this.onViewChange = this.onViewChange.bind(this);
 
     // 添加拖拽事件监听
-    element.addEventListener(
-      "mousedown",
-      this.handleDragStart as EventListener
-    );
-    element.addEventListener(
-      "touchstart",
-      this.handleDragStart as EventListener
-    );
-
-    // 动态基准线装饰
-    this.createDecorations(element);
+    this.element.addEventListener("mousedown", this.handleDragStart);
+    this.element.addEventListener("touchstart", this.handleDragStart);
   }
 
-  // 创建动态基准线装饰
-  createDecorations(element: HTMLElement) {
+  /** 创建控件DOM元素 */
+  private static createControlElement(): HTMLElement {
+    const element = document.createElement("div");
+    element.className = "swipe-control";
+    element.style.left = "50%";
+
     // 顶部装饰
     const topDecoration = document.createElement("div");
     topDecoration.className = "top-decoration";
@@ -50,199 +51,259 @@ class SwipeControl extends Control {
 
     // 中央滑块
     const handle = document.createElement("div");
-    handle.style.position = "absolute";
-    handle.style.left = "50%";
-    handle.style.top = "50%";
-    handle.style.transform = "translate(-50%, -50%)";
-    handle.style.width = "32px";
-    handle.style.height = "96px";
-    handle.style.backgroundColor = "white";
-    handle.style.borderRadius = "4px";
-    handle.style.display = "flex";
-    handle.style.alignItems = "center";
-    handle.style.justifyContent = "center";
-    handle.style.border = "2px solid #3b82f6";
-    handle.classList.add("swipe-handle-shadow");
-
+    handle.className = "swipe-handle";
     handle.innerHTML = `
-                    <div style="width: 4px; height: 64px; background-color: #e2e8f0; border-radius: 2px; display: flex; flex-direction: column; justify-content: space-between;">
-                        <div style="width: 12px; height: 4px; background-color: #3b82f6; border-radius: 2px; transform: translateX(-4px);"></div>
-                        <div style="width: 12px; height: 4px; background-color: #3b82f6; border-radius: 2px; transform: translateX(-4px);"></div>
-                        <div style="width: 12px; height: 4px; background-color: #3b82f6; border-radius: 2px; transform: translateX(-4px);"></div>
-                    </div>
-                `;
+      <div class="handle-visual">
+        <div class="handle-line"></div>
+        <div class="handle-dots">
+          <div class="handle-dot"></div>
+          <div class="handle-dot"></div>
+          <div class="handle-dot"></div>
+        </div>
+      </div>
+    `;
     element.appendChild(handle);
+
+    return element;
   }
 
-  setMap(map: any) {
+  /** 设置地图并初始化 */
+  setMap(map: Map | null) {
     const oldMap = this.getMap();
     if (oldMap) {
-      // 清除旧地图的监听
-      oldMap.un("pointermove", this.updateCursor_);
+      this.cleanupMapListeners(oldMap);
+      this.restoreLayersExtent();
     }
 
     super.setMap(map);
+    this.map = map;
 
     if (map) {
-      // 获取所有图层
-      this.layers = map.getLayers().getArray();
-
-      // 初始化图层分割
-      this.updateLayers_();
-
-      // 添加指针移动事件监听，用于更新光标样式
-      map.on("pointermove", this.updateCursor_, this);
-
-      // 添加窗口大小变化监听
-      window.addEventListener("resize", () => this.updateLayers_());
+      this.initializeMap(map);
     }
   }
 
-  updateCursor_(event: any) {
+  /** 初始化地图相关设置 */
+  private initializeMap(map: Map) {
+    // 保存原始图层范围
+    this.saveOriginalLayerExtents();
+
+    // 获取所有图层
+    this.layers = map.getLayers().getArray();
+
+    // 初始化图层分割
+    this.updateLayers_();
+
+    // 添加指针移动事件监听，用于更新光标样式
+    map.on("pointermove", this.updateCursor_);
+
+    // 添加视图变化监听
+    this.viewChangeListenerKey = map
+      .getView()
+      .on("change:center", this.onViewChange);
+
+    this.viewChangeListenerKey = map
+      .getView()
+      .on("change:resolution", this.onViewChange);
+
+    // 添加窗口大小变化监听
+    window.addEventListener("resize", this.onViewChange);
+  }
+
+  /** 清理地图相关监听器 */
+  private cleanupMapListeners(map: Map) {
+    // 移除指针移动事件监听
+    map.un("pointermove", this.updateCursor_);
+
+    // 移除视图变化监听
+    if (this.viewChangeListenerKey) {
+      unByKey(this.viewChangeListenerKey);
+      this.viewChangeListenerKey = null;
+    }
+
+    // 移除窗口大小变化监听
+    window.removeEventListener("resize", this.onViewChange);
+  }
+
+  /** 保存图层原始范围 */
+  private saveOriginalLayerExtents() {
+    this.layers.forEach((layer) => {
+      const id = layer.get("id") || layer.get("title") || String(Math.random());
+      this.originalExtents[id] = layer.getExtent() || null;
+    });
+  }
+
+  /** 恢复图层原始范围 */
+  private restoreLayersExtent() {
+    this.layers.forEach((layer) => {
+      const id = layer.get("id") || layer.get("title") || String(Math.random());
+      if (this.originalExtents[id]) {
+        layer.setExtent(this.originalExtents[id]);
+      } else {
+        layer.setExtent(null); // 移除自定义范围
+      }
+    });
+  }
+
+  /** 更新光标样式 */
+  private updateCursor_(event: any) {
     if (this.dragging) {
       document.body.style.cursor = "ew-resize";
       return;
     }
 
-    const pixel = this.getMap()?.getEventPixel(event.originalEvent);
-    const mapElement = this.getMap()?.getTargetElement();
-    const hitElement =
-      mapElement instanceof HTMLElement && pixel
-        ? mapElement.ownerDocument.elementFromPoint(pixel[0], pixel[1])
-        : undefined;
-    const hit = hitElement ? this.element.contains(hitElement) : false;
-
+    const pixel = this.map?.getEventPixel(event.originalEvent);
+    const hit = pixel && this.isOverControl(pixel);
     document.body.style.cursor = hit ? "ew-resize" : "";
   }
 
-  private handleDragStart(e: DragEvent) {
-    e.preventDefault();
+  /** 判断像素是否在控件上 */
+  private isOverControl(pixel: number[]): boolean {
+    const mapElement = this.map?.getTargetElement();
+    if (!(mapElement instanceof HTMLElement)) return false;
 
-    // 设置拖拽状态
+    const controlRect = this.element.getBoundingClientRect();
+    const mapRect = mapElement.getBoundingClientRect();
+
+    const pixelX = mapRect.left + pixel[0];
+    const pixelY = mapRect.top + pixel[1];
+
+    return (
+      pixelX >= controlRect.left &&
+      pixelX <= controlRect.right &&
+      pixelY >= controlRect.top &&
+      pixelY <= controlRect.bottom
+    );
+  }
+
+  /** 视图变化时更新图层显示 */
+  private onViewChange() {
+    this.updateLayers_();
+  }
+
+  /** 开始拖拽处理 */
+  private handleDragStart(e: MouseEvent | TouchEvent) {
+    e.preventDefault();
     this.dragging = true;
 
     // 添加拖拽和释放事件监听
-    document.addEventListener("mousemove", this.handleDrag as EventListener);
-    document.addEventListener(
-      "touchmove",
-      (e: TouchEvent) => {
-        this.handleDrag(e as unknown as DragEvent);
-      },
-      {
-        passive: false,
-      }
-    );
+    document.addEventListener("mousemove", this.handleDrag);
+    document.addEventListener("touchmove", this.handleDrag, { passive: false });
     document.addEventListener("mouseup", this.handleDragEnd);
     document.addEventListener("touchend", this.handleDragEnd);
 
     // 阻止地图交互
-    this.getMap()
-      ?.getInteractions()
-      .forEach((interaction) => {
-        interaction.setActive(false);
-      });
+    this.disableMapInteractions();
 
-    // 阻止默认行为
-    document.body.style.userSelect = "none";
+    // 更新样式
+    this.element.classList.add("dragging");
     document.body.style.cursor = "ew-resize";
   }
 
-  private handleDrag(e: DragEvent) {
-    if (!this.dragging) return;
-
+  /** 拖拽处理 */
+  private handleDrag(e: MouseEvent | TouchEvent) {
+    if (!this.dragging || !this.map) return;
     e.preventDefault();
 
     // 获取鼠标/触摸位置
-    const mapRect = this.getMap()?.getTargetElement()?.getBoundingClientRect();
-    let clientX;
-
-    if (e.type === "mousemove") {
-      clientX = e.clientX;
-    } else {
-      // touchmove
-      clientX = (e as unknown as TouchEvent).touches[0].clientX;
-    }
+    const clientX =
+      "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const mapRect = this.map.getTargetElement()?.getBoundingClientRect();
 
     // 计算滑动位置百分比
-    this.swipePosition = mapRect
-      ? (clientX - mapRect.left) / mapRect.width
-      : this.swipePosition;
-    this.swipePosition = Math.max(0, Math.min(1, this.swipePosition));
-
-    // 更新控件位置
-    this.element.style.left = `${this.swipePosition * 100}%`;
-
-    // 更新图层
-    this.updateLayers_();
+    if (mapRect) {
+      this.swipePosition = Math.max(
+        0,
+        Math.min(1, (clientX - mapRect.left) / mapRect.width)
+      );
+      this.element.style.left = `${this.swipePosition * 100}%`;
+      this.updateLayers_();
+    }
   }
 
+  /** 结束拖拽处理 */
   private handleDragEnd() {
-    // 移除拖拽样式
-    this.element.style.border = "none";
-    this.element.style.backgroundColor = "white";
-
-    // 重置拖拽状态
     this.dragging = false;
 
-    // 移除拖拽和释放事件监听
-    document.removeEventListener("mousemove", this.handleDrag as EventListener);
-    document.removeEventListener("touchmove", this.handleDrag as EventListener);
+    // 移除事件监听
+    document.removeEventListener("mousemove", this.handleDrag);
+    document.removeEventListener("touchmove", this.handleDrag);
     document.removeEventListener("mouseup", this.handleDragEnd);
     document.removeEventListener("touchend", this.handleDragEnd);
 
     // 恢复地图交互
-    this.getMap()
-      ?.getInteractions()
-      .forEach((interaction: { setActive: (arg0: boolean) => void }) => {
-        interaction.setActive(true);
-      });
+    this.enableMapInteractions();
 
-    // 恢复默认行为
-    document.body.style.userSelect = "";
+    // 恢复样式
+    this.element.classList.remove("dragging");
     document.body.style.cursor = "";
   }
 
-  updateLayers_() {
-    if (!this.getMap()) return;
+  /** 禁用地图交互 */
+  private disableMapInteractions() {
+    this.map?.getInteractions().forEach((interaction) => {
+      interaction.setActive(false);
+    });
+    document.body.style.userSelect = "none";
+  }
 
-    const mapSize = this.getMap()?.getSize();
+  /** 启用地图交互 */
+  private enableMapInteractions() {
+    this.map?.getInteractions().forEach((interaction) => {
+      interaction.setActive(true);
+    });
+    document.body.style.userSelect = "";
+  }
+
+  /** 更新图层显示 */
+  private updateLayers_() {
+    if (!this.map) return;
+
+    const mapSize = this.map.getSize();
     if (!mapSize) return;
 
     // 计算分割线位置
     const splitPosition = Math.round(mapSize[0] * this.swipePosition);
+    console.log("🚀 ~ SwipeControl ~ updateLayers_ ~ splitPosition:", splitPosition)
 
     // 获取投影范围
-    const projectionExtent = this.getMap()
-      ?.getView()
-      .getProjection()
-      .getExtent();
+    const projectionExtent = this.map.getView().getProjection().getExtent();
+    const splitCoordinate = this.map.getCoordinateFromPixel([splitPosition, 0]);
+    const splitCoordinateX = splitCoordinate?.[0] || 0;
 
     // 更新每个图层的裁剪区域
     this.layers.forEach((layer, index) => {
       // 偶数图层显示在左侧，奇数图层显示在右侧
       if (index % 2 === 0) {
         layer.setExtent([
-          projectionExtent ? projectionExtent[0] : 0,
-          projectionExtent ? projectionExtent[1] : 0,
-          this.getMap()?.getCoordinateFromPixel([splitPosition, 0])[0],
-          projectionExtent ? projectionExtent[3] : 0,
+          projectionExtent?.[0] || 0,
+          projectionExtent?.[1] || 0,
+          splitCoordinateX,
+          projectionExtent?.[3] || 0,
         ]);
       } else {
         layer.setExtent([
-          this.getMap()?.getCoordinateFromPixel([splitPosition, 0])[0],
-          projectionExtent ? projectionExtent[1] : 0,
-          projectionExtent ? projectionExtent[2] : 0,
-          projectionExtent ? projectionExtent[3] : 0,
+          splitCoordinateX,
+          projectionExtent?.[1] || 0,
+          projectionExtent?.[2] || 0,
+          projectionExtent?.[3] || 0,
         ]);
       }
     });
   }
 
-  // 重置卷帘位置
+  /** 重置卷帘位置到中间 */
   reset() {
     this.swipePosition = 0.5;
     this.element.style.left = `${this.swipePosition * 100}%`;
     this.updateLayers_();
+  }
+
+  /** 销毁卷帘控件，恢复地图状态 */
+  destroy() {
+    this.restoreLayersExtent();
+    this.setMap(null);
+    super.dispose();
   }
 }
 

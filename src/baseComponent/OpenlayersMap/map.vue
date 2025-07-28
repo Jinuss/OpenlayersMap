@@ -5,7 +5,6 @@ import View from "ol/View";
 import * as olProj from "ol/proj";
 import OSM from "ol/source/OSM.js";
 import TileLayer from "ol/layer/Tile";
-import SwipeControl from "../../Control/Swiper";
 import {
   ZoomSlider,
   FullScreen,
@@ -13,11 +12,9 @@ import {
   ZoomToExtent,
   OverviewMap,
 } from "ol/control";
-import {
-  KeyboardPan,
-} from "ol/interaction";
+import { KeyboardPan } from "ol/interaction";
 import PrintDialog from "ol-ext/control/PrintDialog";
-import { jsPDF } from "jspdf";
+import { jsPDF, RGBAData } from "jspdf";
 import { saveAs } from "file-saver";
 import { v4 as uuidv4 } from "uuid";
 import { VECTOR_LAYER, AMAP_LAYER, GOOGLE_LAYER } from "./layers.ts";
@@ -76,11 +73,8 @@ const initMap = () => {
   map.addControl(new ScaleLine());
 
   map.addControl(new ZoomToExtent({ extent: EXTENT }));
-  const swiperControl = new SwipeControl();
-  map.addControl(swiperControl);
-  try {
-    emit("setMap", map);
-  } catch {}
+  
+  emit("setMap", map);
 
   /** 
   map.on("loadstart", () => {
@@ -98,42 +92,71 @@ const initMap = () => {
   printControl.setSize("A4");
   map.addControl(printControl);
 
-  printControl.on(["print", "error"], function (e) {
-    // Print success
-    if (e.image) {
-      const uuid = uuidv4().replace(/-/g, "");
-      if (e.pdf) {
-        var pdf = new jsPDF({
-          orientation: e.print.orientation,
-          unit: e.print.unit,
-          format: e.print.size,
-        });
-        pdf.addImage(
-          e.image,
-          "JPEG",
-          e.print.position[0],
-          e.print.position[0],
-          e.print.imageWidth,
-          e.print.imageHeight
-        );
-        pdf.save(e.print.legend ? "legend.pdf" : `openlayers_${uuid}.pdf`);
+  printControl.on(
+    ["print", "error"],
+    function (e: {
+      image:
+        | string
+        | HTMLImageElement
+        | HTMLCanvasElement
+        | Uint8Array<ArrayBufferLike>
+        | RGBAData;
+      pdf: any;
+      print: {
+        orientation: any;
+        unit: any;
+        size: any;
+        position: number[];
+        imageWidth: number;
+        imageHeight: number;
+        legend: any;
+      };
+      canvas: {
+        toBlob: (
+          arg0: (blob: string | Blob) => void,
+          arg1: any,
+          arg2: any
+        ) => void;
+      };
+      imageType: string;
+      quality: any;
+    }) {
+      // Print success
+      if (e.image) {
+        const uuid = uuidv4().replace(/-/g, "");
+        if (e.pdf) {
+          var pdf = new jsPDF({
+            orientation: e.print.orientation,
+            unit: e.print.unit,
+            format: e.print.size,
+          });
+          pdf.addImage(
+            e.image,
+            "JPEG",
+            e.print.position[0],
+            e.print.position[0],
+            e.print.imageWidth,
+            e.print.imageHeight
+          );
+          pdf.save(e.print.legend ? "legend.pdf" : `openlayers_${uuid}.pdf`);
+        } else {
+          // Save image as file
+          e.canvas.toBlob(
+            function (blob: string | Blob) {
+              var name =
+                (e.print.legend ? "legend." : `map_${uuid}.`) +
+                e.imageType.replace("image/", "");
+              saveAs(blob, name);
+            },
+            e.imageType,
+            e.quality
+          );
+        }
       } else {
-        // Save image as file
-        e.canvas.toBlob(
-          function (blob) {
-            var name =
-              (e.print.legend ? "legend." : `map_${uuid}.`) +
-              e.imageType.replace("image/", "");
-            saveAs(blob, name);
-          },
-          e.imageType,
-          e.quality
-        );
+        console.warn("No canvas to export");
       }
-    } else {
-      console.warn("No canvas to export");
     }
-  });
+  );
 };
 
 onMounted(() => {

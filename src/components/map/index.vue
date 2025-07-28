@@ -24,6 +24,7 @@ import {
 import { THEME_COLOR } from "../../const/const.common.ts";
 import { tileLoadFunction } from "../../util/mapTool.ts";
 import keyboardNote from "../../baseComponent/keyboardNote.vue";
+import GithubIcon from "../../baseComponent/GithubIcon.vue";
 
 const MapStore = useMapStore();
 const PanelStore = usePanelStore();
@@ -41,6 +42,9 @@ commonStore.$onAction(({ name, after }) => {
   if (name == "setThemeColor") {
     after(({ color }) => {
       const mapInstance = toRaw(map.value);
+      if(!mapInstance){
+          return
+      }
       const baseLayer = mapInstance
         .getLayers()
         .getArray()
@@ -51,7 +55,7 @@ commonStore.$onAction(({ name, after }) => {
 
       if (baseLayer) {
         let source = AMAP_LAYER().getSource();
-        if (color == THEME_COLOR.NIGHT) {
+        if (color == THEME_COLOR.NIGHT && source) {
           source.setTileLoadFunction(tileLoadFunction);
         }
         baseLayer.setSource(source);
@@ -93,5 +97,8 @@ commonStore.$onAction(({ name, after }) => {
 
   <!--鼠标按键交互卡片-->
   <keyboardNote />
+
+  <!--github图标-->
+  <GithubIcon />
 </template>
 <style scoped></style>

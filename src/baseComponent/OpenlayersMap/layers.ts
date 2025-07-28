@@ -4,7 +4,6 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import XYZ from "ol/source/XYZ";
 import { WATER_TEXT } from "./const.map";
-import { Tile } from "ol";
 
 export const LAYER_NAMES = {
   AMAP_LAYER: "AMAP_LAYER",
@@ -35,7 +34,7 @@ export const AMAP_LAYER = (layerName?: string) => {
 export const GOOGLE_LAYER = new TileLayer({
   source: new XYZ({ url: GOOGLE_URL, crossOrigin: "anonymous" }),
   className: LAYER_NAMES.GOOGLE_LAYER,
-  visible: true,
+  visible: false,
 });
 
 //矢量图层
@@ -79,18 +78,20 @@ export const WATER_LAYER = ({
           return canvas.getContext("2d");
         }
 
-        context.fillStyle = "rgba(184, 184, 184, 0.8)";
+        if (context) {
+          context.fillStyle = "rgba(184, 184, 184, 0.8)";
 
-        context.textAlign = "center";
-        context.textBaseline = "middle";
+          context.textAlign = "center";
+          context.textBaseline = "middle";
 
-        context.font = "32px microsoft yahei";
+          context.font = "32px microsoft yahei";
 
-        context.rotate((Math.PI / 180) * 30);
+          context?.rotate((Math.PI / 180) * 30);
 
-        context.fillText(waterText, half, half);
+          context?.fillText(waterText, half, half);
+        }
 
-        return context.canvas.toDataURL();
+        return context?.canvas.toDataURL();
       },
     }),
     className: LAYER_NAMES.WATER_LAYER,

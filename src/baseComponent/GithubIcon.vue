@@ -2,11 +2,11 @@
 const githubLink = "https://github.com/Jinuss/maps";
 </script>
 <template>
-  <a :href="githubLink" class="icss-github-corner" title="求个star"><i></i></a>
+  <a :href="githubLink" class="iss-github-corner" title="求个star"><i></i></a>
 </template>
 <style scoped>
-a.icss-github-corner,
-a.icss-github-corner-left {
+a.iss-github-corner,
+a.iss-github-corner-left {
   font-size: 1.8em;
   position: fixed;
   top: 0;
@@ -25,7 +25,7 @@ a.icss-github-corner-left {
   overflow: hidden;
 }
 
-a.icss-github-corner-left {
+a.iss-github-corner-left {
   left: 0;
   right: auto;
   -webkit-transform: rotate(-45deg);
@@ -36,15 +36,15 @@ a.icss-github-corner-left {
   transform-origin: 1em 3.1em;
 }
 
-a.icss-github-corner:hover i,
-a.icss-github-corner-left:hover i {
+a.iss-github-corner:hover i,
+a.iss-github-corner-left:hover i {
   -webkit-animation: vertical 2s ease;
   animation: vertical 2s ease;
 }
 
-a.icss-github-corner i,
-a.icss-github-corner-left i,
-i.icss-github-corner {
+a.iss-github-corner i,
+a.iss-github-corner-left i,
+i.iss-github-corner {
   color:var(--primary-color);
   position: relative;
   display: inline-block;
@@ -65,9 +65,9 @@ i.icss-github-corner {
   margin: 0.12em 0.1em 0.23em;
 }
 
-a.icss-github-corner i:before,
-a.icss-github-corner-left i:before,
-i.icss-github-corner:before {
+a.iss-github-corner i:before,
+a.iss-github-corner-left i:before,
+i.iss-github-corner:before {
   content: "";
   border-width: 0;
   position: absolute;
@@ -84,9 +84,9 @@ i.icss-github-corner:before {
   transform: rotate(20deg);
 }
 
-a.icss-github-corner i:after,
-a.icss-github-corner-left i:after,
-i.icss-github-corner:after {
+a.iss-github-corner i:after,
+a.iss-github-corner-left i:after,
+i.iss-github-corner:after {
   content: "";
   border-width: 0;
   position: absolute;

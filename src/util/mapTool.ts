@@ -2,7 +2,7 @@ import * as sphere from "ol/sphere";
 import { Style, Stroke, Icon } from "ol/style";
 import { Geometry, Point } from "ol/geom";
 import { Coordinate } from "ol/coordinate";
-import { Tile } from "ol";
+import { Map, Tile } from "ol";
 import { StyleLike } from "ol/style/Style";
 
 export const formatDistance = (dis: number) => {
@@ -344,7 +344,7 @@ function calculateAnglePoint(points) {
 }
 
 //暗色地图底图
-export const tileLoadFunction = (imageTile:Tile) => {
+export const tileLoadFunction = (imageTile: Tile) => {
   const img = new Image();
   img.setAttribute("crossOrigin", "anonymous");
   img.onload = function () {
@@ -362,4 +362,12 @@ export const tileLoadFunction = (imageTile:Tile) => {
     }
   };
   img.src = src;
+};
+
+// 根据图层名获取图层
+export const getLayerByClassName = (map: Map, classname: any) => {
+  return map
+    .getLayers()
+    .getArray()
+    .find((i) => i.getClassName() == classname);
 };

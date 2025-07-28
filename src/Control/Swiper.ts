@@ -3,6 +3,8 @@ import Map from "ol/Map";
 import "./Swiper.css";
 import { EventsKey } from "ol/events";
 import { unByKey } from "ol/Observable";
+import { LAYER_NAMES } from "../baseComponent/OpenlayersMap/layers";
+import { getLayerByClassName } from "../util/mapTool";
 
 /**
  * 地图卷帘控件，支持左右滑动比较不同图层
@@ -14,12 +16,27 @@ class SwipeControl extends Control {
   private map: Map | null = null;
   private originalExtents: { [layerId: string]: any } = {};
   private viewChangeListenerKey: null | EventsKey = null;
+  private leftLayerClassName: string = LAYER_NAMES.AMAP_LAYER;
+  private rightLayerClassName: string = LAYER_NAMES.GOOGLE_LAYER;
 
-  constructor(options: { target?: any } = {}) {
+  constructor(
+    options: {
+      target?: any;
+      leftLayerClassName?: string;
+      rightLayerClassName?: string;
+    } = {}
+  ) {
     super({
       element: SwipeControl.createControlElement(),
       target: options.target,
     });
+    // 处理左右图层名
+    if (options.leftLayerClassName) {
+      this.leftLayerClassName = options.leftLayerClassName;
+    }
+    if (options.rightLayerClassName) {
+      this.rightLayerClassName = options.rightLayerClassName;
+    }
 
     // 绑定事件处理函数
     this.handleDrag = this.handleDrag.bind(this);
@@ -264,32 +281,37 @@ class SwipeControl extends Control {
 
     // 计算分割线位置
     const splitPosition = Math.round(mapSize[0] * this.swipePosition);
-    console.log("🚀 ~ SwipeControl ~ updateLayers_ ~ splitPosition:", splitPosition)
+    console.log(
+      "🚀 ~ SwipeControl ~ updateLayers_ ~ splitPosition:",
+      splitPosition
+    );
 
     // 获取投影范围
     const projectionExtent = this.map.getView().getProjection().getExtent();
     const splitCoordinate = this.map.getCoordinateFromPixel([splitPosition, 0]);
     const splitCoordinateX = splitCoordinate?.[0] || 0;
 
+    const leftLayer = getLayerByClassName(this.map, this.leftLayerClassName);
+    const rightLayer = getLayerByClassName(this.map, this.rightLayerClassName);
+
     // 更新每个图层的裁剪区域
-    this.layers.forEach((layer, index) => {
-      // 偶数图层显示在左侧，奇数图层显示在右侧
-      if (index % 2 === 0) {
-        layer.setExtent([
-          projectionExtent?.[0] || 0,
-          projectionExtent?.[1] || 0,
-          splitCoordinateX,
-          projectionExtent?.[3] || 0,
-        ]);
-      } else {
-        layer.setExtent([
-          splitCoordinateX,
-          projectionExtent?.[1] || 0,
-          projectionExtent?.[2] || 0,
-          projectionExtent?.[3] || 0,
-        ]);
-      }
-    });
+    if (leftLayer) {
+      leftLayer.setExtent([
+        splitCoordinateX,
+        projectionExtent?.[1] || 0,
+        projectionExtent?.[2] || 0,
+        projectionExtent?.[3] || 0,
+      ]);
+    }
+
+    if (rightLayer) {
+      rightLayer.setExtent([
+        projectionExtent?.[0] || 0,
+        projectionExtent?.[1] || 0,
+        splitCoordinateX,
+        projectionExtent?.[3] || 0,
+      ]);
+    }
   }
 
   /** 重置卷帘位置到中间 */

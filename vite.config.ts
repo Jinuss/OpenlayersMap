@@ -9,9 +9,9 @@ export default defineConfig({
     qiankun("vue-openlayers-app", { useDevMode: true }),
   ],
   base: "./",
-  build: {
-    outDir: "../map_pages",
-  },
+  // build: {
+  //   outDir: "../map_pages",
+  // },
   server: {
     port: 5158,
   },
